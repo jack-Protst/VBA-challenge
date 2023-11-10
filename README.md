@@ -1,1 +1,144 @@
-# VBA-challenge
+Sub CreateSummaryTable()
+    Dim ws As Worksheet
+    Dim LastRow As Long
+    Dim Ticker As String
+    Dim OpeningPrice As Double
+    Dim ClosingPrice As Double
+    Dim Volume As Double
+    Dim SummaryRow As Long
+    Dim FirstOpenPrice As Double
+    Dim LastClosePrice As Double
+    Dim CurrentStock As String
+    Dim TotalVolume As Double
+    Dim GreatestPercentIncrease As Double
+    Dim GreatestPercentDecrease As Double
+    Dim GreatestTotalVolume As Double
+    Dim GreatestPercentIncreaseTicker As String
+    Dim GreatestPercentDecreaseTicker As String
+    Dim GreatestTotalVolumeTicker As String
+
+    ' Loop through each sheet in the workbook
+    For Each ws In ThisWorkbook.Sheets
+        ' I had intially created the summary as a sepreate page and had use chatgpt to help me fix my code in that regard 
+        If ws.Name <> "Summary1" And ws.Name <> "Summary2" Then
+            ' Find the last row of data
+            LastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+
+            ' Initialize the summary table within the same worksheet
+            SummaryRow = 1 ' Start at the first row
+            ws.Cells(1, 9).Value = "Ticker"
+            ws.Cells(1, 10).Value = "First Opening Price"
+            ws.Cells(1, 11).Value = "Last Closing Price"
+            ws.Cells(1, 12).Value = "Yearly Change"
+            ws.Cells(1, 13).Value = "Percent Change"
+            ws.Cells(1, 14).Value = "Volume"
+            ws.Cells(1, 15).Value = "Greatest Metrics"
+            ws.Cells(1, 16).Value = "Ticker"
+            ws.Cells(1, 17).Value = "Value"
+
+            ' Initialize greatest metrics variables
+            GreatestPercentIncrease = 0
+            GreatestPercentDecrease = 0
+            GreatestTotalVolume = 0
+            GreatestPercentIncreaseTicker = ""
+            GreatestPercentDecreaseTicker = ""
+            GreatestTotalVolumeTicker = ""
+
+            For i = 2 To LastRow
+                Ticker = ws.Cells(i, 1).Value
+
+                If Ticker <> CurrentStock Then
+                    ' Start a new stock, initialize values
+                    CurrentStock = Ticker
+                    FirstOpenPrice = ws.Cells(i, 3).Value
+                    TotalVolume = 0 ' Reset total volume for the new stock
+                End If
+
+                ' Store the ClosingPrice and Volume for each row
+                ClosingPrice = ws.Cells(i, 6).Value
+                Volume = ws.Cells(i, 7).Value
+
+                ' Update LastClosePrice for the current Ticker
+                LastClosePrice = ClosingPrice
+
+                ' Accumulate Volume for the current stock
+                TotalVolume = TotalVolume + Volume
+
+                ' When encountering a new Ticker or the last row, output the data for the stock
+                If (i = LastRow) Or (ws.Cells(i + 1, 1).Value <> Ticker) Then
+                    ' Calculate Yearly Change
+                    Dim YearlyChange As Double
+                    YearlyChange = LastClosePrice - FirstOpenPrice
+
+                    ' Calculate Percent Change
+                    Dim PercentChange As Double
+                    If FirstOpenPrice <> 0 Then
+                        PercentChange = YearlyChange / FirstOpenPrice
+                    Else
+                        PercentChange = 0
+                    End If
+
+                    ' Increment the summary row before outputting data
+                    SummaryRow = SummaryRow + 1
+
+                    ' Output data to the summary table
+                    ws.Cells(SummaryRow, 9).Value = Ticker
+                    ws.Cells(SummaryRow, 10).Value = FirstOpenPrice
+                    ws.Cells(SummaryRow, 11).Value = LastClosePrice
+                    ws.Cells(SummaryRow, 12).Value = YearlyChange
+                    ws.Cells(SummaryRow, 13).Value = PercentChange
+                    ws.Cells(SummaryRow, 14).Value = TotalVolume
+
+                    ' Apply conditional formatting to Yearly Change column
+                    Dim rng As Range
+                    Set rng = ws.Cells(SummaryRow, 12)
+
+                    ' Clear existing conditional formatting
+                    rng.FormatConditions.Delete
+
+                    ' Apply new conditional formatting
+                    With rng.FormatConditions.Add(Type:=xlCellValue, Operator:=xlEqual, Formula1:="=0")
+                        .Interior.ColorIndex = xlNone
+                    End With
+                    With rng.FormatConditions.Add(Type:=xlCellValue, Operator:=xlGreater, Formula1:="0")
+                        .Interior.Color = RGB(0, 255, 0) ' Green for positive values
+                    End With
+                    With rng.FormatConditions.Add(Type:=xlCellValue, Operator:=xlLess, Formula1:="0")
+                        .Interior.Color = RGB(255, 0, 0) ' Red for negative values
+                    End With
+
+                    ' Update greatest metrics
+                    If PercentChange > GreatestPercentIncrease Then
+                        GreatestPercentIncrease = PercentChange
+                        GreatestPercentIncreaseTicker = Ticker
+                    End If
+
+                    If PercentChange < GreatestPercentDecrease Then
+                        GreatestPercentDecrease = PercentChange
+                        GreatestPercentDecreaseTicker = Ticker
+                    End If
+
+                    If TotalVolume > GreatestTotalVolume Then
+                        GreatestTotalVolume = TotalVolume
+                        GreatestTotalVolumeTicker = Ticker
+                    End If
+                End If
+            Next i
+
+            ' Output greatest metrics to the second row of the summary table
+            
+            SummaryRow = 2
+            ws.Cells(SummaryRow, 15).Value = "Greatest % Increase"
+            ws.Cells(SummaryRow, 16).Value = GreatestPercentIncreaseTicker
+            ws.Cells(SummaryRow, 17).Value = GreatestPercentIncrease
+            SummaryRow = SummaryRow + 1
+            ws.Cells(SummaryRow, 15).Value = "Greatest % Decrease"
+            ws.Cells(SummaryRow, 16).Value = GreatestPercentDecreaseTicker
+            ws.Cells(SummaryRow, 17).Value = GreatestPercentDecrease
+            SummaryRow = SummaryRow + 1
+            ws.Cells(SummaryRow, 15).Value = "Greatest Total Volume"
+            ws.Cells(SummaryRow, 16).Value = GreatestTotalVolumeTicker
+            ws.Cells(SummaryRow, 17).Value = GreatestTotalVolume
+        End If
+    Next ws
+End Sub
